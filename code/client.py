@@ -14,7 +14,12 @@ if command_list_was_not_used:
     directory = sys.argv[4]
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.connect((host, port))
+
+try:
+    server.connect((host, port))
+except ConnectionRefusedError:
+    print(f'Host {host} and port {port} not found')
+    exit()
 
 
 def list_files():
