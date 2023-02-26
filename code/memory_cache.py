@@ -44,14 +44,20 @@ class MemoryCache:
 
     def __free_up(self, bytes_to_free_up):
         free_space = 0
+        keys_to_remove = []
 
         for key in self.__files.keys():
             free_space += self.__files[key].size
-            self.__files[key].close()
-            self.__files.pop(key)
+            keys_to_remove.append(key)
 
             if free_space >= bytes_to_free_up:
                 break
+
+        for key in keys_to_remove:
+            self.__files[key].close()
+            self.__files.pop(key)
+
+        self.__used_memory_cache -= free_space
 
     def clear_memory(self):
         for file in self.__files.values():
