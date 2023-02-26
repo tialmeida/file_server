@@ -14,6 +14,10 @@ class MemoryCache:
 
     def get_file(self, directory, filename):
         file = self.__files.get(get_key(directory, filename))
+
+        if file is None:
+            return None, None
+
         return file.get_file(), file.size
 
     def exist_file_in_cache(self, directory, filename):
@@ -24,8 +28,12 @@ class MemoryCache:
         else:
             return True
 
-    def add_file(self, directory, filename, file):
-        file_size = os.path.getsize(get_key(directory, filename))
+    def add_file(self, directory, filename):
+        try:
+            file_size = os.path.getsize(get_key(directory, filename))
+            file = open(f'{directory}/{filename}', 'rb')
+        except FileNotFoundError:
+            return None
 
         if file_size > self.__max_size:
             return False
@@ -54,14 +62,10 @@ class MemoryCache:
                 break
 
         for key in keys_to_remove:
-            self.__files[key].close()
             self.__files.pop(key)
 
         self.__used_memory_cache -= free_space
 
     def clear_memory(self):
-        for file in self.__files.values():
-            file.close()
-
         self.__files.clear()
         self.__used_memory_cache = 0

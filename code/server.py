@@ -45,25 +45,40 @@ def transform_file_list(files):
 
 
 def send_file(client_connection, filename):
-    file_size = None
-    file = None
-
     if cache.exist_file_in_cache(directory, filename):
-        file, file_size = cache.get_file(directory, filename)
         print(f' Cache hit. File {filename} sent to the client.')
     else:
-        try:
-            file = open(f'{directory}/{filename}', 'rb')
-            file_size = os.path.getsize(f'{directory}/{filename}')
-        except FileNotFoundError:
+        add_file_response = cache.add_file(directory, filename)
+
+        if add_file_response is None:
             print(f'File {filename} does not exist')
             client_connection.send(utils.FILE_NOT_FOUND.encode(utils.ENCODE_TYPE))
             return
-
-        if cache.add_file(directory, filename, file):
+        elif add_file_response:
             print(f' Cache miss. File {filename} sent to the client')
         else:
             print(f' Cache miss and file exceed the cache memory size. File {filename} sent to the client')
+            send_files_without_cache(client_connection, filename)
+            return
+
+    file, file_size = cache.get_file(directory, filename)
+
+    client_connection.send(f'{file_size}'.encode(utils.ENCODE_TYPE))
+    progress = tqdm.tqdm(range(file_size), f'{filename}', unit='B', unit_scale=True, unit_divisor=1024)
+
+    for bytes_read in file:
+        connection.sendall(bytes_read)
+        progress.update(len(bytes_read))
+
+
+def send_files_without_cache(client_connection, filename):
+    try:
+        file = open(f'{directory}/{filename}', 'rb')
+        file_size = os.path.getsize(f'{directory}/{filename}')
+    except FileNotFoundError:
+        print(f'File {filename} does not exist')
+        client_connection.send(utils.FILE_NOT_FOUND.encode(utils.ENCODE_TYPE))
+        return
 
     client_connection.send(f'{file_size}'.encode(utils.ENCODE_TYPE))
     progress = tqdm.tqdm(range(file_size), f'{filename}', unit='B', unit_scale=True, unit_divisor=1024)
